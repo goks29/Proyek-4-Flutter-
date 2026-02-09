@@ -1,16 +1,9 @@
-# logbook_app_001
+Prinsip SRP sangat membantu saya dalam membuat perubahan atau menambahkan fitur. Saat menambahkan History Logger, saya jadi tahu bagaimana memisahkan tugasnya:
 
-A new Flutter project.
+1. Di Controller: Saya fokus pada logika menambahkan list dan membatasi 5 data terakhir.
 
-## Getting Started
+2. Di View : Saya fokus pada bagaimana data tersebut ditampilkan seperti memberikan warna hijau atau merah dan tata letak Card.
 
-This project is a starting point for a Flutter application.
+SRP juga membuat code saya lebih mudah dibaca dan diperbaiki. Jika ada kesalahan warna, saya cukup mencari di file view tanpa harus takut merusak logika di file controller.
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
