@@ -40,11 +40,13 @@
         setState(() {
           _failedAttempts = 0;
         });
+
+        int jamMasuk = DateTime.now().hour;
         
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder:(context)=> CounterView(username:user),
+            builder:(context)=> CounterView(username:user, jamLogin: jamMasuk),
           ),
         );
       } else {

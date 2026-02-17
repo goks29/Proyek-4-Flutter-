@@ -4,10 +4,12 @@ import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
 
 class CounterView extends StatefulWidget {
   final String username;
+  final int jamLogin;
 
   const CounterView({
     super.key,
     required this.username,
+    required this.jamLogin,
   });
 
   @override
@@ -15,7 +17,7 @@ class CounterView extends StatefulWidget {
 }
 
 class _CounterViewState extends State<CounterView> {
-  final CounterController _controller = CounterController();
+  late final CounterController _controller;
   final TextEditingController _stepInputController = TextEditingController();
 
   void _showResetDialog() {
@@ -90,6 +92,18 @@ class _CounterViewState extends State<CounterView> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _controller = CounterController(username: widget.username);
+    _controller.readData().then((_) {
+      if (mounted) {
+        _stepInputController.text = _controller.stepValue.toString();
+        setState(() {});
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -109,7 +123,7 @@ class _CounterViewState extends State<CounterView> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              "Selamat Datang, ${widget.username}!",
+              "${_controller.ucapan(widget.jamLogin)}, ${widget.username}!",
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 20),
