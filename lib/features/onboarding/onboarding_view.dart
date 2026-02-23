@@ -17,16 +17,16 @@ class _OnboardingViewState extends State<OnboardingView> {
   ];
 
   void _handleNext() {
-    setState(() {
-      step++;
-    });
-
-    if (step > 3) {
+    if (step < onBoardingView.length) {
+      setState(() {
+        step++;
+      });
+    } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginView()),
       );
-    }
+    } 
   }
 
   @override

@@ -16,7 +16,7 @@ class LogView extends StatefulWidget {
 }
 
 class _LogViewState extends State<LogView> {
-  late final LogController _controller;
+  final LogController _controller = LogController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
@@ -54,6 +54,7 @@ class _LogViewState extends State<LogView> {
 
               _titleController.clear();
               _contentController.clear();
+              Navigator.pop(context);
             },
             child: const Text("Simpan"),
           ),
@@ -157,7 +158,7 @@ class _LogViewState extends State<LogView> {
                   title: Text(log.title),
                   subtitle: Text(log.description),
                   trailing: Wrap(
-                    spacing: 8,
+                    spacing: 10,
                     children: [
                       IconButton(icon: const Icon(Icons.edit, color: Colors.blue),
                         onPressed: () => _showEditLogDialog(index,log)),
