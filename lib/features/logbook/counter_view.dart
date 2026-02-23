@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logbook_app_001/features/logbook/counter_controller.dart';
-import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
+import 'package:logbook_app_001/features/auth/login_view.dart';
 
 class CounterView extends StatefulWidget {
   final String username;
@@ -75,7 +75,7 @@ class _CounterViewState extends State<CounterView> {
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const OnboardingView(),
+                    builder: (context) => const LoginView(),
                   ),
                   (route) => false,
                 );
@@ -199,9 +199,9 @@ class _CounterViewState extends State<CounterView> {
             const SizedBox(height: 10),
             Column(
               children: _controller.history.map((log) {
-                Color warnaLog = log.contains("Ditambah")
+                Color warnaLog = log.contains("menambah")
                     ? Colors.green
-                    : log.contains("Dikurang")
+                    : log.contains("mengurang")
                         ? Colors.red
                         : Colors.grey;
 

@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:logbook_app_001/features/logbook/counter_view.dart';
 
 class CounterController {
     int _counter = 0; // Variabel private (Enkapsulasi)
@@ -18,7 +17,7 @@ class CounterController {
 
     void increment() {
       _counter += _step;
-      _addLog("Ditambah $_step");
+      _addLog("menambah $_step");
       saveData();
     } 
     
@@ -28,14 +27,14 @@ class CounterController {
         if (_counter < 0) {
           _counter = 0;
         }
-        _addLog("Dikurang $_step");
+        _addLog("mengurang $_step");
         saveData();
       }
     }
 
     void reset() {
       _counter = 0;
-      _addLog("Direset ke 0");
+      _addLog("mereset ke 0");
       saveData();
     } 
 
@@ -46,7 +45,7 @@ class CounterController {
 
     void _addLog(String action) {
       String time = DateTime.now().toString().split('.')[0];
-      _history.insert(0, "$action pada $time");
+      _history.insert(0, "${username} $action pada $time");
       
       if (_history.length > 5) {
         _history.removeLast();
