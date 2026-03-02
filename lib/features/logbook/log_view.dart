@@ -16,83 +16,197 @@ class LogView extends StatefulWidget {
 }
 
 class _LogViewState extends State<LogView> {
-  final LogController _controller = LogController();
+  late final LogController _controller;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
+  final List<String> _categories = ['Pribadi', 'Pekerjaan', 'Urgent'];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = LogController(widget.username);
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'Urgent':
+        return Colors.red.shade100;
+      case 'Pekerjaan':
+        return Colors.blue.shade100;
+      case 'Pribadi':
+      default:
+        return Colors.green.shade100;
+    }
+  }
+
   void _showAddLogDialog() {
+    String selectedCategory = 'Pribadi'; 
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Tambah Catatan Baru"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(hintText: "Judul Catatan"),
-            ),
-            TextField(
-              controller: _contentController,
-              decoration: const InputDecoration(hintText: "isi Deskripsi")
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Batal"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _controller.addLog(
-                _titleController.text,
-                _contentController.text,
-              );
-
-              setState(() {});
-
-              _titleController.clear();
-              _contentController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text("Simpan"),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Tambah Catatan Baru"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(hintText: "Judul Catatan"),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _contentController,
+                    decoration: const InputDecoration(hintText: "Isi Deskripsi"),
+                  ),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: "Kategori",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _categories.map((String category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          selectedCategory = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _titleController.clear();
+                    _contentController.clear();
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Batal"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Title dan description tidak boleh kosong!"),
+                          backgroundColor: Colors.red,
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    } else {
+                      _controller.addLog(
+                        _titleController.text,
+                        _contentController.text,
+                        selectedCategory,
+                      );
+                      _titleController.clear();
+                      _contentController.clear();
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text("Simpan"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   void _showEditLogDialog(int index, LogModel log) {
     _titleController.text = log.title;
     _contentController.text = log.description;
+    String selectedCategory = log.category; 
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Edit Catatan"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _titleController),
-            TextField(controller: _contentController),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
-          ElevatedButton(
-            onPressed: () {
-              _controller.updateLog(index, _titleController.text, _contentController.text);
-              _titleController.clear();
-              _contentController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text("Update"),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Edit Catatan"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: _titleController),
+                  const SizedBox(height: 10),
+                  TextField(controller: _contentController),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: "Kategori",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _categories.map((String category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          selectedCategory = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _titleController.clear();
+                    _contentController.clear();
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Batal"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Title dan description tidak boleh kosong!"),
+                          backgroundColor: Colors.red,
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    } else {
+                      _controller.updateLog(
+                        index,
+                        _titleController.text,
+                        _contentController.text,
+                        selectedCategory,
+                      );
+                      _titleController.clear();
+                      _contentController.clear();
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text("Update"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
-  
+
   void _handleLogout() {
     showDialog(
       context: context,
@@ -129,14 +243,15 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text("Logbook: ${widget.username}"),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -144,33 +259,113 @@ class _LogViewState extends State<LogView> {
           ),
         ],
       ),
-      body: ValueListenableBuilder<List<LogModel>>(
-        valueListenable: _controller.logsNotifier,
-        builder: (context, currentLogs, child) {
-          if (currentLogs.isEmpty) return const Center(child: Text("Belum ada catatan."));
-          return ListView.builder(
-            itemCount: currentLogs.length,
-            itemBuilder: (context, index) {
-              final log = currentLogs[index];
-              return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.note),
-                  title: Text(log.title),
-                  subtitle: Text(log.description),
-                  trailing: Wrap(
-                    spacing: 10,
-                    children: [
-                      IconButton(icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _showEditLogDialog(index,log)),
-                      IconButton(icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _controller.removeLog(index)),
-                    ],
-                  ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              onChanged: (value) => _controller.searchLog(value),
+              decoration: InputDecoration(
+                labelText: "Cari Catatan...",
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15.0),
+                  borderSide: BorderSide.none,
                 ),
-              );
-            },
-          );
-        }
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15.0),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<List<LogModel>>(
+              valueListenable: _controller.filteredLogs,
+              builder: (context, currentLogs, child) {
+                if (currentLogs.isEmpty) {
+                  return Center(
+                    child: Image.asset(
+                      'assets/images/catatan.png',
+                      width: 500, 
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 80),
+                  itemCount: currentLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = currentLogs[index];
+                
+                    return Dismissible(
+                      key: Key(log.date), 
+                      direction: DismissDirection.endToStart, 
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      onDismissed: (direction) => _controller.removeLog(index),
+                      child: Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        color: _getCategoryColor(log.category), 
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: const Icon(Icons.note),
+                          title: Text(
+                            log.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(log.description),
+                              const SizedBox(height: 4),
+                              // Nampilin tanggal dan kategori di bawahnya
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    log.date.substring(0, 16),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  Text(
+                                    log.category,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => _showEditLogDialog(index, log),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          )
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddLogDialog,

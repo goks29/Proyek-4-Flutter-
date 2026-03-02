@@ -45,7 +45,7 @@ class CounterController {
 
     void _addLog(String action) {
       String time = DateTime.now().toString().split('.')[0];
-      _history.insert(0, "${username} $action pada $time");
+      _history.insert(0, "$username $action pada $time");
       
       if (_history.length > 5) {
         _history.removeLast();

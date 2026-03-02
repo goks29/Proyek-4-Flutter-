@@ -41,7 +41,6 @@
           _failedAttempts = 0;
         });
 
-        int jamMasuk = DateTime.now().hour;
         
         Navigator.pushReplacement(
           context,
