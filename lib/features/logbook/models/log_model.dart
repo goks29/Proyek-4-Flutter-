@@ -27,6 +27,7 @@ class LogModel {
 
   Map<String,dynamic> toMap() {
     return {
+      '_id': id ?? ObjectId(),
       'title' : title,
       'date' : date,
       'description' : description,

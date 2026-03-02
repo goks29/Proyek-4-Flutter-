@@ -50,5 +50,35 @@ class MongoService {
     }
   }
 
-  // Tambahkan metode updateLog dan deleteLog sesuai modul Langkah 5 [cite: 346]
+  Future<void> updateLog(LogModel log) async {
+    try {
+      if (_collection == null) await connect();
+      if (log.id == null) throw Exception("ID Log tidak ditemukan untuk update");
+
+      await _collection!.replaceOne(where.id(log.id!), log.toMap());
+      await LogHelper.writeLog("DATABASE: Update '${log.title}' Berhasil", source: _source, level: 2);
+    } catch (e) {
+      await LogHelper.writeLog("DATABASE: Update Gagal - $e", source: _source, level: 1);
+      rethrow;
+    }
+  }
+
+  // DELETE: Menghapus dokumen
+  Future<void> deleteLog(ObjectId id) async {
+    try {
+      if (_collection == null) await connect();
+      await _collection!.remove(where.id(id));
+      await LogHelper.writeLog("DATABASE: Hapus ID $id Berhasil", source: _source, level: 2);
+    } catch (e) {
+      await LogHelper.writeLog("DATABASE: Hapus Gagal - $e", source: _source, level: 1);
+      rethrow;
+    }
+  }
+
+  Future<void> close() async {
+    if (_db != null) {
+      await _db!.close();
+      await LogHelper.writeLog("DATABASE: Koneksi ditutup", source: _source, level: 2);
+    }
+  }
 }
