@@ -20,11 +20,9 @@ class LogHelper {
           DateFormat('HH:mm:ss').format(DateTime.now());
       String label = _getLabel(level);
 
-      // Format final message
       final formattedMessage =
           '[$timestamp][$label][$source] -> $message';
 
-      // Gunakan dev.log (Production-safe)
       dev.log(
         formattedMessage,
         name: source,

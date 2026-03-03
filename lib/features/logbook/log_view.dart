@@ -2,16 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:logbook_app_001/features/logbook/log_controller.dart';
 import 'package:logbook_app_001/features/auth/login_view.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
-import 'package:logbook_app_001/services/mongo_service.dart';
-import 'package:logbook_app_001/helpers/log_helper.dart';
 
 class LogView extends StatefulWidget {
   final String username;
 
-  const LogView({
-    super.key,
-    required this.username,
-  });
+  const LogView({super.key, required this.username});
 
   @override
   State<LogView> createState() => _LogViewState();
@@ -22,46 +17,24 @@ class _LogViewState extends State<LogView> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
-  bool _isLoading = false;
-
   final List<String> _categories = ['Pribadi', 'Pekerjaan', 'Urgent'];
 
   @override
   void initState() {
     super.initState();
     _controller = LogController(widget.username);
-    Future.microtask(() => _initDatabase());
-  }
-
-  Future<void> _initDatabase() async {
-    setState(() => _isLoading = true);
-    try {
-      await LogHelper.writeLog("UI: Memulai inisialisasi database...", source: "log_view.dart");
-
-      // Mencoba koneksi ke MongoDB Atlas dengan timeout 15 detik 
-      await MongoService().connect().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () => throw Exception("Koneksi Cloud Timeout. Periksa sinyal/IP Whitelist."),
-      );
-
-      await LogHelper.writeLog("UI: Koneksi MongoService BERHASIL.", source: "log_view.dart");
-      
-      // Mengambil data log dari Cloud melalui controller 
-      await _controller.loadFromDisk();
-
-      await LogHelper.writeLog("UI: Data berhasil dimuat ke Notifier.", source: "log_view.dart");
-    } catch (e) {
-      await LogHelper.writeLog("UI: Error - $e", source: "log_view.dart", level: 1);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Masalah: $e"), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false); // Loading dimatikan apa pun hasilnya 
-      }
-    }
+    Future.microtask(
+      () => _controller.initDatabase().catchError((e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Koneksi Gagal: $e"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }),
+    );
   }
 
   Color _getCategoryColor(String category) {
@@ -77,7 +50,7 @@ class _LogViewState extends State<LogView> {
   }
 
   void _showAddLogDialog() {
-    String selectedCategory = 'Pribadi'; 
+    String selectedCategory = 'Pribadi';
 
     showDialog(
       context: context,
@@ -91,12 +64,16 @@ class _LogViewState extends State<LogView> {
                 children: [
                   TextField(
                     controller: _titleController,
-                    decoration: const InputDecoration(hintText: "Judul Catatan"),
+                    decoration: const InputDecoration(
+                      hintText: "Judul Catatan",
+                    ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _contentController,
-                    decoration: const InputDecoration(hintText: "Isi Deskripsi"),
+                    decoration: const InputDecoration(
+                      hintText: "Isi Deskripsi",
+                    ),
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
@@ -132,10 +109,13 @@ class _LogViewState extends State<LogView> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+                    if (_titleController.text.isEmpty ||
+                        _contentController.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Title dan description tidak boleh kosong!"),
+                          content: Text(
+                            "Title dan description tidak boleh kosong!",
+                          ),
                           backgroundColor: Colors.red,
                           duration: Duration(seconds: 1),
                         ),
@@ -164,7 +144,7 @@ class _LogViewState extends State<LogView> {
   void _showEditLogDialog(int index, LogModel log) {
     _titleController.text = log.title;
     _contentController.text = log.description;
-    String selectedCategory = log.category; 
+    String selectedCategory = log.category;
 
     showDialog(
       context: context,
@@ -213,10 +193,13 @@ class _LogViewState extends State<LogView> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+                    if (_titleController.text.isEmpty ||
+                        _contentController.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Title dan description tidak boleh kosong!"),
+                          content: Text(
+                            "Title dan description tidak boleh kosong!",
+                          ),
                           backgroundColor: Colors.red,
                           duration: Duration(seconds: 1),
                         ),
@@ -262,9 +245,7 @@ class _LogViewState extends State<LogView> {
                 Navigator.pop(context);
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const LoginView(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const LoginView()),
                   (route) => false,
                 );
               },
@@ -287,141 +268,166 @@ class _LogViewState extends State<LogView> {
         title: Text("Logbook: ${widget.username}"),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-          ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              onChanged: (value) => _controller.searchLog(value),
-              decoration: InputDecoration(
-                labelText: "Cari Catatan...",
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15.0),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15.0),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+      body: ValueListenableBuilder<bool>(
+        valueListenable: _controller.isLoading,
+        builder: (context, loading, child) {
+          if (loading) {
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text("Menghubungkan data ke databse"),
+                ],
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
+                  onChanged: (value) => _controller.searchLog(value),
+                  decoration: InputDecoration(
+                    labelText: "Cari Catatan...",
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Expanded(
-            child: ValueListenableBuilder<List<LogModel>>(
-              // Menggunakan filteredLogs agar fitur pencarian tetap jalan
-              valueListenable: _controller.filteredLogs,
-              builder: (context, currentLogs, child) {
-                
-                // 1. Tampilan Loading saat sedang menghubungkan ke Atlas 
-                if (_isLoading) {
-                  return const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text("Menghubungkan ke MongoDB Atlas..."),
-                      ],
-                    ),
-                  );
-                }
-
-                // 2. Tampilan jika loading selesai tapi data di Atlas kosong 
-                if (currentLogs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text("Belum ada catatan di Cloud."),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                          onPressed: _showAddLogDialog,
-                          child: const Text("Buat Catatan Pertama"),
+              Expanded(
+                child: ValueListenableBuilder<List<LogModel>>(
+                  valueListenable: _controller.filteredLogs,
+                  builder: (context, currentLogs, child) {
+                    if (currentLogs.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.cloud_off,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text("Belum ada catatan di Cloud."),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: _showAddLogDialog,
+                              child: const Text("Buat Catatan Pertama"),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                }
+                      );
+                    }
 
-                // 3. Jika data sudah masuk, tampilkan List (Reaktivitas Cloud) 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: currentLogs.length,
-                  itemBuilder: (context, index) {
-                    final log = currentLogs[index];
-                
-                    return Dismissible(
-                      key: Key(log.id?.toString() ?? log.date.toString()), 
-                      direction: DismissDirection.endToStart, 
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      onDismissed: (direction) => _controller.removeLog(index),
-                      child: Card(
-                        elevation: 2,
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        color: _getCategoryColor(log.category), 
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          // Menandakan data ini sudah tersinkron dengan cloud 
-                          leading: const Icon(Icons.cloud_done, color: Colors.green),
-                          title: Text(
-                            log.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 80),
+                      itemCount: currentLogs.length,
+                      itemBuilder: (context, index) {
+                        final log = currentLogs[index];
+
+                        return Dismissible(
+                          key: Key(log.id?.toString() ?? log.date.toString()),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
                           ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(log.description),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          onDismissed: (direction) =>
+                              _controller.removeLog(index),
+                          child: Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            color: _getCategoryColor(log.category),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              leading: const Icon(
+                                Icons.cloud_done,
+                                color: Colors.green,
+                              ),
+                              title: Text(
+                                log.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    log.date.toString().substring(0, 16),
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                                  ),
-                                  Text(
-                                    log.category,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  Text(log.description),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        log.date.toString().substring(0, 16),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      Text(
+                                        log.category,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
+                                onPressed: () => _showEditLogDialog(index, log),
+                              ),
+                            ),
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showEditLogDialog(index, log),
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
-          )
-        ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddLogDialog,
         child: const Icon(Icons.add),

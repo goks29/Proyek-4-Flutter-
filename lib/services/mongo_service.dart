@@ -18,7 +18,7 @@ class MongoService {
       if (dbUri == null) throw Exception("MONGODB_URI tidak ditemukan di .env");
 
       _db = await Db.create(dbUri);
-      await _db!.open().timeout(const Duration(seconds: 15)); // Timeout koneksi [cite: 346]
+      await _db!.open().timeout(const Duration(seconds: 15)); 
       _collection = _db!.collection('logs');
 
       await LogHelper.writeLog("DATABASE: Terhubung & Koleksi Siap", source: _source, level: 2);
@@ -32,7 +32,7 @@ class MongoService {
     try {
       if (_collection == null) await connect();
       final List<Map<String, dynamic>> data = await _collection!.find().toList();
-      return data.map((json) => LogModel.fromMap(json)).toList(); // Ambil dari Cloud [cite: 346]
+      return data.map((json) => LogModel.fromMap(json)).toList(); 
     } catch (e) {
       await LogHelper.writeLog("ERROR: Fetch Failed - $e", source: _source, level: 1);
       return [];
@@ -42,7 +42,7 @@ class MongoService {
   Future<void> insertLog(LogModel log) async {
     try {
       if (_collection == null) await connect();
-      await _collection!.insertOne(log.toMap()); // Simpan ke Cloud [cite: 346]
+      await _collection!.insertOne(log.toMap()); 
       await LogHelper.writeLog("SUCCESS: Data '${log.title}' Saved", source: _source, level: 2);
     } catch (e) {
       await LogHelper.writeLog("ERROR: Insert Failed - $e", source: _source, level: 1);
@@ -63,7 +63,6 @@ class MongoService {
     }
   }
 
-  // DELETE: Menghapus dokumen
   Future<void> deleteLog(ObjectId id) async {
     try {
       if (_collection == null) await connect();
