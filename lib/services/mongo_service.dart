@@ -7,19 +7,26 @@ class MongoService {
   static final MongoService _instance = MongoService._internal();
   Db? _db;
   DbCollection? _collection;
+  String? _currentUsername;
   final String _source = "mongo_service.dart";
 
   factory MongoService() => _instance;
   MongoService._internal();
 
-  Future<void> connect() async {
+  Future<void> connect(String username) async {
     try {
+      if (_db != null && _db!.state == State.OPEN && _currentUsername == username) {
+        return;
+      }
+
+      _currentUsername = username;
+
       final dbUri = dotenv.env['MONGODB_URI'];
       if (dbUri == null) throw Exception("MONGODB_URI tidak ditemukan di .env");
 
       _db = await Db.create(dbUri);
       await _db!.open().timeout(const Duration(seconds: 15)); 
-      _collection = _db!.collection('logs');
+      _collection = _db!.collection('logs_$username');
 
       await LogHelper.writeLog("DATABASE: Terhubung & Koleksi Siap", source: _source, level: 2);
     } catch (e) {
@@ -30,7 +37,10 @@ class MongoService {
 
   Future<List<LogModel>> getLogs() async {
     try {
-      if (_collection == null) await connect();
+      if (_collection == null) {
+        if (_currentUsername == null) throw Exception("Username kosong");
+        await connect(_currentUsername!);
+      }
       final List<Map<String, dynamic>> data = await _collection!.find().toList();
       return data.map((json) => LogModel.fromMap(json)).toList(); 
     } catch (e) {
@@ -41,7 +51,10 @@ class MongoService {
 
   Future<void> insertLog(LogModel log) async {
     try {
-      if (_collection == null) await connect();
+      if (_collection == null) {
+        if (_currentUsername == null) throw Exception("Username kosong");
+        await connect(_currentUsername!);
+      }
       await _collection!.insertOne(log.toMap()); 
       await LogHelper.writeLog("SUCCESS: Data '${log.title}' Saved", source: _source, level: 2);
     } catch (e) {
@@ -52,7 +65,10 @@ class MongoService {
 
   Future<void> updateLog(LogModel log) async {
     try {
-      if (_collection == null) await connect();
+      if (_collection == null) {
+        if (_currentUsername == null) throw Exception("Username kosong");
+        await connect(_currentUsername!);
+      }
       if (log.id == null) throw Exception("ID Log tidak ditemukan untuk update");
 
       await _collection!.replaceOne(where.id(log.id!), log.toMap());
@@ -65,7 +81,10 @@ class MongoService {
 
   Future<void> deleteLog(ObjectId id) async {
     try {
-      if (_collection == null) await connect();
+      if (_collection == null) {
+        if (_currentUsername == null) throw Exception("Username kosong");
+        await connect(_currentUsername!);
+      }
       await _collection!.remove(where.id(id));
       await LogHelper.writeLog("DATABASE: Hapus ID $id Berhasil", source: _source, level: 2);
     } catch (e) {

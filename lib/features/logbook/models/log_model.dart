@@ -16,10 +16,17 @@ class LogModel {
   });
 
   factory LogModel.fromMap(Map<String,dynamic> map) {
+    DateTime parsedData = DateTime.now();
+    if (map['date'] is DateTime) {
+      parsedData = (map['date'] as DateTime).toLocal();
+    } else if (map['date'] is String) {
+      parsedData = DateTime.parse(map['date']).toLocal();
+    }
+
     return LogModel(
       id: map['_id'] as ObjectId?,
       title: map['title'] ?? '',
-      date: map['date'] != null ? DateTime.parse(map['date']) : DateTime.now(),
+      date: parsedData,
       description: map['description'] ?? '',
       category: map['category'] ?? 'Pribadi'
     );

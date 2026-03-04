@@ -18,7 +18,7 @@ class LogController {
     try {
       await LogHelper.writeLog("CONTROLLER: Memulai inisialisasi...", source: "log_controller.dart");
 
-      await MongoService().connect().timeout(
+      await MongoService().connect(username).timeout(
         const Duration(seconds: 15),
         onTimeout: () => throw Exception("Koneksi Cloud Timeout. Periksa sinyal/IP Whitelist."),
       );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:logbook_app_001/features/logbook/log_controller.dart';
 import 'package:logbook_app_001/features/auth/login_view.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
@@ -28,8 +29,17 @@ class _LogViewState extends State<LogView> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("Koneksi Gagal: $e"),
-              backgroundColor: Colors.red,
+              content: const Row(
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white),
+                  Expanded(
+                    child: Text("Offline Mode: Tidak dapat tersambung ke database"),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -51,7 +61,6 @@ class _LogViewState extends State<LogView> {
 
   void _showAddLogDialog() {
     String selectedCategory = 'Pribadi';
-
     showDialog(
       context: context,
       builder: (context) {
@@ -145,7 +154,6 @@ class _LogViewState extends State<LogView> {
     _titleController.text = log.title;
     _contentController.text = log.description;
     String selectedCategory = log.category;
-
     showDialog(
       context: context,
       builder: (context) {
@@ -287,7 +295,7 @@ class _LogViewState extends State<LogView> {
               ),
             );
           }
-
+          //search bar
           return Column(
             children: [
               Padding(
@@ -310,6 +318,7 @@ class _LogViewState extends State<LogView> {
                   ),
                 ),
               ),
+              //list log kosong
               Expanded(
                 child: ValueListenableBuilder<List<LogModel>>(
                   valueListenable: _controller.filteredLogs,
@@ -335,90 +344,116 @@ class _LogViewState extends State<LogView> {
                         ),
                       );
                     }
+                    //refresh
+                    return RefreshIndicator(
+                      color: Colors.blue,
+                      backgroundColor: Colors.white,
+                      onRefresh: () async {
+                        await _controller.loadFromDisk();
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: currentLogs.length,
-                      itemBuilder: (context, index) {
-                        final log = currentLogs[index];
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Data berhasil diperbaharui"),
+                              duration: Duration(seconds:1),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
 
-                        return Dismissible(
-                          key: Key(log.id?.toString() ?? log.date.toString()),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            color: Colors.red,
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.white,
+                      //list log ada
+                      child:  ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: currentLogs.length,
+                        itemBuilder: (context, index) {
+                          final log = currentLogs[index];
+
+                          return Dismissible(
+                            key: Key(log.id?.toString() ?? log.date.toString()),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              color: Colors.red,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
-                          onDismissed: (direction) =>
-                              _controller.removeLog(index),
-                          child: Card(
-                            elevation: 2,
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            color: _getCategoryColor(log.category),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
+                            onDismissed: (direction) =>
+                                _controller.removeLog(index),
+                            child: Card(
+                              elevation: 2,
+                              margin: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
                               ),
-                              leading: const Icon(
-                                Icons.cloud_done,
-                                color: Colors.green,
+                              color: _getCategoryColor(log.category),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              title: Text(
-                                log.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
                                 ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(log.description),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        log.date.toString().substring(0, 16),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade700,
-                                        ),
-                                      ),
-                                      Text(
-                                        log.category,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                                leading: const Icon(
+                                  Icons.cloud_done,
+                                  color: Colors.green,
+                                ),
+                                title: Text(
+                                  log.title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                ],
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
                                 ),
-                                onPressed: () => _showEditLogDialog(index, log),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(log.description),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          DateFormat.yMMMMEEEEd('id').format(log.date),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                        Text(
+                                          DateFormat('HH:mm').format(log.date),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                        Text(
+                                          log.category,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () => _showEditLogDialog(index, log),
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     );
                   },
                 ),
@@ -427,7 +462,7 @@ class _LogViewState extends State<LogView> {
           );
         },
       ),
-
+      //add button
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddLogDialog,
         child: const Icon(Icons.add),
