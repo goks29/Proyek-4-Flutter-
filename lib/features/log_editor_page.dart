@@ -126,7 +126,11 @@ class _LogEditorPageState extends State<LogEditorPage> {
               ),
             ),
             // Tab 2: Markdown Preview
-            Markdown(data: _descController.text),
+            Markdown(
+              data: _descController.text,
+              selectable: true,
+              
+            ),
           ],
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart';
+import 'package:hive/hive.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
 import 'package:logbook_app_001/services/mongo_service.dart';
 import 'package:logbook_app_001/helpers/log_helper.dart';
@@ -46,6 +47,9 @@ class LogController {
       authorId: currentUser.id,   
       teamId: currentUser.teamId,  
     );
+
+    final box = Hive.box<LogModel>('offline_logs');
+    await box.put(newLog.id.toString(),newLog);
     
     try {
       await MongoService().insertLog(newLog);
@@ -109,9 +113,26 @@ class LogController {
   }
 
   Future<void> loadFromDisk() async {
-    final cloudData = await MongoService().getLogs();
-    logsNotifier.value = cloudData;
-    filteredLogs.value = cloudData;
+    final box = Hive.box<LogModel>('offline_logs');
+    
+    try {
+      // 1. Ambil data terbaru dari Cloud (MongoDB)
+      final cloudData = await MongoService().getLogs();
+      
+      // 2. Timpa data di Hive dengan data terbaru dari Cloud (Master Data)
+      await box.clear();
+      for (var log in cloudData) {
+        await box.put(log.id.toString(), log);
+      }
+      
+      logsNotifier.value = cloudData;
+    } catch (e) {
+      // 3. Jika gagal/offline, ambil data dari Hive saja
+      await LogHelper.writeLog("Offline Mode: Mengambil data dari local storage.");
+      logsNotifier.value = box.values.toList();
+    } finally {
+      filteredLogs.value = logsNotifier.value;
+    }
   }
 
   void searchLog(String query) {

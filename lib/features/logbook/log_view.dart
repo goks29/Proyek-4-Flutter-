@@ -453,12 +453,11 @@ class _LogViewState extends State<LogView> {
                                       ),
                                       onPressed: () => _showEditLogDialog(index, log),
                                     ),
-                                    if (AccessPolicy.canPerform(currentUser.role, 'delete', isOwner:log.authorId == currentUser.id))
+                                    if (AccessControlService.canPerform(_controller.currentUser.role, 'delete', isOwner:log.authorId == _controller.currentUser.id))
                                         IconButton(
                                           icon: Icon(Icons.delete, color: Colors.red),
                                           onPressed: () => _controller.removeLog(index),
                                         )
-                                    ),
                                   ]
                                 )
                               ),
