@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:logbook_app_001/features/logbook/log_controller.dart';
 import 'package:logbook_app_001/features/auth/login_view.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
+import 'package:logbook_app_001/services/access_control_service.dart';
 
 class LogView extends StatefulWidget {
   final String username;
@@ -442,13 +443,24 @@ class _LogViewState extends State<LogView> {
                                     ),
                                   ],
                                 ),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.blue,
-                                  ),
-                                  onPressed: () => _showEditLogDialog(index, log),
-                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit,
+                                        color: Colors.blue,
+                                      ),
+                                      onPressed: () => _showEditLogDialog(index, log),
+                                    ),
+                                    if (AccessPolicy.canPerform(currentUser.role, 'delete', isOwner:log.authorId == currentUser.id))
+                                        IconButton(
+                                          icon: Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () => _controller.removeLog(index),
+                                        )
+                                    ),
+                                  ]
+                                )
                               ),
                             ),
                           );
