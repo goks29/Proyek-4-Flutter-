@@ -8,14 +8,17 @@ import 'package:logbook_app_001/services/access_control_service.dart';
 
 class LogController {
   final String username;
+  final String role;
   
-  final currentUser = (id: 'user_001', role: 'Anggota', teamId: 'team_polban_01');
+  late final dynamic currentUser;
 
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
   final ValueNotifier<List<LogModel>> filteredLogs = ValueNotifier([]);
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
 
-  LogController(this.username);
+  LogController(this.username, this.role) {
+    currentUser = (id: username, role:role, teamId: 'team_polban_01');
+  }
 
   Future<void> initDatabase() async {
     isLoading.value = true; 
@@ -39,22 +42,30 @@ class LogController {
 
   Future<void> addLog(String title, String desc, String category) async {
     final newLog = LogModel(
-      id: ObjectId(), 
+      id: ObjectId().oid, 
       title: title,
       description: desc,
       date: DateTime.now(),
       category: category,
       authorId: currentUser.id,   
       teamId: currentUser.teamId,  
+      isSynced: false,
     );
 
     final box = Hive.box<LogModel>('offline_logs');
-    await box.put(newLog.id.toString(),newLog);
+    await box.put(newLog.id.toString(), newLog);
+
+    logsNotifier.value = [...logsNotifier.value, newLog];
+    filteredLogs.value = logsNotifier.value;
     
     try {
       await MongoService().insertLog(newLog);
-      logsNotifier.value = [...logsNotifier.value, newLog];
-      filteredLogs.value = logsNotifier.value;
+      newLog.isSynced = true;
+      await box.put(newLog.id.toString(), newLog);
+
+      logsNotifier.value = List.from(logsNotifier.value);
+      logsNotifier.value = List.from(filteredLogs.value);
+
     } catch (e) {
       LogHelper.writeLog("Gagal tambah log: $e", level: 1);
     }
@@ -73,16 +84,24 @@ class LogController {
       teamId: logToUpdate.teamId,     
     );
 
+    final currentLogs = List<LogModel>.from(logsNotifier.value);
+    final realIndex = logsNotifier.value.indexOf(logToUpdate);
+      
+    if (realIndex != -1) {
+      currentLogs[realIndex] = updatedLog;
+      logsNotifier.value = currentLogs;
+      filteredLogs.value = currentLogs;
+    }
+
+    try{
+      final box = Hive.box<LogModel>('offline_logs');
+      await box.put(updatedLog.id.toString(), updatedLog);
+    } catch (e) {
+      LogHelper.writeLog("HIVE ERROR: Gagal update lokal - $e", level: 1);
+    }
+
     try {
       await MongoService().updateLog(updatedLog);
-      final currentLogs = List<LogModel>.from(logsNotifier.value);
-      final realIndex = logsNotifier.value.indexOf(logToUpdate);
-      
-      if (realIndex != -1) {
-        currentLogs[realIndex] = updatedLog;
-        logsNotifier.value = currentLogs;
-        filteredLogs.value = currentLogs;
-      }
     } catch (e) {
       LogHelper.writeLog("Gagal update log: $e", level: 1);
     }
@@ -101,8 +120,13 @@ class LogController {
 
       if (logToRemove.id != null) {
         await MongoService().deleteLog(logToRemove.id!);
+
+        final box = Hive.box<LogModel>('offline_logs');
+        await box.delete(logToRemove.id.toString());
+
         final currentLogs = List<LogModel>.from(logsNotifier.value);
         currentLogs.removeWhere((item) => item.id == logToRemove.id);
+
         
         logsNotifier.value = currentLogs;
         filteredLogs.value = List.from(currentLogs);
@@ -118,8 +142,23 @@ class LogController {
     try {
       // 1. Ambil data terbaru dari Cloud (MongoDB)
       final cloudData = await MongoService().getLogs();
+      final localData = box.values.toList();
       
-      // 2. Timpa data di Hive dengan data terbaru dari Cloud (Master Data)
+      for (var localLog in localData) {
+        bool existInCloud = cloudData.any((cloudLog) => cloudLog.id == localLog.id);
+        if (!existInCloud) {
+          await LogHelper.writeLog("Mendorong data offline ke Cloud: ${localLog.title}");
+          try {
+            await MongoService().insertLog(localLog);
+            localLog.isSynced = true;
+            cloudData.add(localLog);
+          } catch (e) {
+            LogHelper.writeLog("Gagal push data offline: $e");
+            cloudData.add(localLog);
+          }
+        }
+      }
+
       await box.clear();
       for (var log in cloudData) {
         await box.put(log.id.toString(), log);

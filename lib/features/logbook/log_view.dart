@@ -7,8 +7,9 @@ import 'package:logbook_app_001/services/access_control_service.dart';
 
 class LogView extends StatefulWidget {
   final String username;
+  final String role;
 
-  const LogView({super.key, required this.username});
+  const LogView({super.key, required this.username, required this.role});
 
   @override
   State<LogView> createState() => _LogViewState();
@@ -24,7 +25,7 @@ class _LogViewState extends State<LogView> {
   @override
   void initState() {
     super.initState();
-    _controller = LogController(widget.username);
+    _controller = LogController(widget.username, widget.role);
     Future.microtask(
       () => _controller.initDatabase().catchError((e) {
         if (mounted) {
@@ -370,9 +371,11 @@ class _LogViewState extends State<LogView> {
                         itemBuilder: (context, index) {
                           final log = currentLogs[index];
 
+                          bool canDelete = AccessControlService.canPerform(_controller.currentUser.role, 'delete', isOwner: log.authorId == _controller.currentUser.id);
+                          
                           return Dismissible(
                             key: Key(log.id?.toString() ?? log.date.toString()),
-                            direction: DismissDirection.endToStart,
+                            direction: canDelete ? DismissDirection.endToStart : DismissDirection.none,
                             background: Container(
                               color: Colors.red,
                               alignment: Alignment.centerRight,
@@ -399,9 +402,9 @@ class _LogViewState extends State<LogView> {
                                   horizontal: 16,
                                   vertical: 8,
                                 ),
-                                leading: const Icon(
-                                  Icons.cloud_done,
-                                  color: Colors.green,
+                                leading: Icon(
+                                  log.isSynced ? Icons.cloud_done : Icons.cloud_off,
+                                  color: log.isSynced ? Colors.green : Colors.orange,
                                 ),
                                 title: Text(
                                   log.title,
@@ -446,10 +449,11 @@ class _LogViewState extends State<LogView> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.edit,
-                                        color: Colors.blue,
+                                    if (AccessControlService.canPerform(_controller.currentUser.role, 'update', isOwner:log.authorId == _controller.currentUser.id))
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: Colors.blue,
                                       ),
                                       onPressed: () => _showEditLogDialog(index, log),
                                     ),

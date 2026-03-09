@@ -15,10 +15,6 @@ class MongoService {
 
   Future<void> connect(String username) async {
     try {
-      if (_db != null && _db!.state == State.OPEN && _currentUsername == username) {
-        return;
-      }
-
       _currentUsername = username;
 
       final dbUri = dotenv.env['MONGODB_URI'];
@@ -26,7 +22,7 @@ class MongoService {
 
       _db = await Db.create(dbUri);
       await _db!.open().timeout(const Duration(seconds: 15)); 
-      _collection = _db!.collection('logs_$username');
+      _collection = _db!.collection('shared_logs');
 
       await LogHelper.writeLog("DATABASE: Terhubung & Koleksi Siap", source: _source, level: 2);
     } catch (e) {
@@ -45,7 +41,7 @@ class MongoService {
       return data.map((json) => LogModel.fromMap(json)).toList(); 
     } catch (e) {
       await LogHelper.writeLog("ERROR: Fetch Failed - $e", source: _source, level: 1);
-      return [];
+      throw Exception("Gagal mengambil data dari Cloud: $e");
     }
   }
 
@@ -71,7 +67,7 @@ class MongoService {
       }
       if (log.id == null) throw Exception("ID Log tidak ditemukan untuk update");
 
-      await _collection!.replaceOne(where.id(log.id!), log.toMap());
+      await _collection!.replaceOne(where.id(ObjectId.fromHexString(log.id!)), log.toMap());
       await LogHelper.writeLog("DATABASE: Update '${log.title}' Berhasil", source: _source, level: 2);
     } catch (e) {
       await LogHelper.writeLog("DATABASE: Update Gagal - $e", source: _source, level: 1);
@@ -79,13 +75,13 @@ class MongoService {
     }
   }
 
-  Future<void> deleteLog(ObjectId id) async {
+  Future<void> deleteLog(String id) async {
     try {
       if (_collection == null) {
         if (_currentUsername == null) throw Exception("Username kosong");
         await connect(_currentUsername!);
       }
-      await _collection!.remove(where.id(id));
+      await _collection!.remove(where.id(ObjectId.fromHexString(id)));
       await LogHelper.writeLog("DATABASE: Hapus ID $id Berhasil", source: _source, level: 2);
     } catch (e) {
       await LogHelper.writeLog("DATABASE: Hapus Gagal - $e", source: _source, level: 1);

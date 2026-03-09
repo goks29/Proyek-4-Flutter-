@@ -48,7 +48,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
   }
 
 
-  void _save() {
+  void _save() async {
   if (_titleController.text.isEmpty || _descController.text.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Judul dan deskripsi tidak boleh kosong")),
@@ -57,13 +57,13 @@ class _LogEditorPageState extends State<LogEditorPage> {
   }
 
   if (widget.log == null) {
-    widget.controller.addLog(
+    await widget.controller.addLog(
       _titleController.text,
       _descController.text,
       _selectedCategory, 
     );
   } else {
-    widget.controller.updateLog(
+    await widget.controller.updateLog(
       widget.index!,
       _titleController.text,
       _descController.text,

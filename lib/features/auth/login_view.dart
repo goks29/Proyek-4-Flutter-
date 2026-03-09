@@ -41,11 +41,12 @@
           _failedAttempts = 0;
         });
 
+        String assignedRole = _controller.getRole(user);
         
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder:(context)=> LogView(username:user),
+            builder:(context)=> LogView(username:user, role:assignedRole),
           ),
         );
       } else {
