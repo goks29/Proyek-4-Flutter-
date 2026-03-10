@@ -29,19 +29,18 @@ class _LogEditorPageState extends State<LogEditorPage> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   String _selectedCategory = 'Pribadi';
+  bool _isPublic = false;
 
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.log?.title ?? '');
-    _descController = TextEditingController(
-      text: widget.log?.description ?? '',
-    );
+    _descController = TextEditingController(text: widget.log?.description ?? '',);
     _selectedCategory = widget.log?.category ?? 'Pribadi';
+    _isPublic = widget.log?.isPublic ?? false;
 
 
-    // TAMBAHKAN INI: Listener agar Pratinjau terupdate otomatis
     _descController.addListener(() {
       setState(() {});
     });
@@ -61,6 +60,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
       _titleController.text,
       _descController.text,
       _selectedCategory, 
+      _isPublic,
     );
   } else {
     await widget.controller.updateLog(
@@ -68,6 +68,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
       _titleController.text,
       _descController.text,
       _selectedCategory,
+      _isPublic,
     );
   }
   Navigator.pop(context);
@@ -76,7 +77,6 @@ class _LogEditorPageState extends State<LogEditorPage> {
 
   @override
   void dispose() {
-    // JANGAN LUPA: Bersihkan controller agar tidak memory leak
     _titleController.dispose();
     _descController.dispose();
     super.dispose();
@@ -100,7 +100,6 @@ class _LogEditorPageState extends State<LogEditorPage> {
         ),
         body: TabBarView(
           children: [
-            // Tab 1: Editor
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -109,7 +108,41 @@ class _LogEditorPageState extends State<LogEditorPage> {
                     controller: _titleController,
                     decoration: const InputDecoration(labelText: "Judul"),
                   ),
+                  const SizedBox(height: 15),
+       
+                  DropdownButtonFormField<String>(
+                    value: _selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: "Kategori",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ['Pribadi', 'Pekerjaan', 'Urgent'].map((String category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedCategory = value;
+                        });
+                      }
+                    },
+                  ),
+                  
+                  SwitchListTile(
+                    title: const Text("Publikasikan?"),
+                    subtitle: const Text("Bisa dilihat anggota Tim"),
+                    value: _isPublic,
+                    onChanged: (value) {
+                      setState(() {
+                        _isPublic = value;
+                      });
+                    },
+                  ),
                   const SizedBox(height: 10),
+                  
                   Expanded(
                     child: TextField(
                       controller: _descController,
@@ -125,11 +158,9 @@ class _LogEditorPageState extends State<LogEditorPage> {
                 ],
               ),
             ),
-            // Tab 2: Markdown Preview
             Markdown(
               data: _descController.text,
               selectable: true,
-              
             ),
           ],
         ),
@@ -137,4 +168,3 @@ class _LogEditorPageState extends State<LogEditorPage> {
     );
   }
 }
-

@@ -4,7 +4,6 @@ import 'package:hive/hive.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
 import 'package:logbook_app_001/services/mongo_service.dart';
 import 'package:logbook_app_001/helpers/log_helper.dart';
-import 'package:logbook_app_001/services/access_control_service.dart'; 
 
 class LogController {
   final String username;
@@ -40,7 +39,8 @@ class LogController {
     }
   }
 
-  Future<void> addLog(String title, String desc, String category) async {
+
+  Future<void> addLog(String title, String desc, String category, bool public) async {
     final newLog = LogModel(
       id: ObjectId().oid, 
       title: title,
@@ -50,6 +50,7 @@ class LogController {
       authorId: currentUser.id,   
       teamId: currentUser.teamId,  
       isSynced: false,
+      isPublic: public,
     );
 
     final box = Hive.box<LogModel>('offline_logs');
@@ -64,14 +65,14 @@ class LogController {
       await box.put(newLog.id.toString(), newLog);
 
       logsNotifier.value = List.from(logsNotifier.value);
-      logsNotifier.value = List.from(filteredLogs.value);
+      filteredLogs.value = List.from(logsNotifier.value);
 
     } catch (e) {
       LogHelper.writeLog("Gagal tambah log: $e", level: 1);
     }
   }
 
-  Future<void> updateLog(int index, String title, String desc, String category) async {
+  Future<void> updateLog(int index, String title, String desc, String category, bool public) async {
     final logToUpdate = filteredLogs.value[index];
     
     final updatedLog = LogModel(
@@ -82,6 +83,7 @@ class LogController {
       category: category,
       authorId: logToUpdate.authorId, 
       teamId: logToUpdate.teamId,     
+      isPublic: public,
     );
 
     final currentLogs = List<LogModel>.from(logsNotifier.value);
@@ -107,11 +109,12 @@ class LogController {
     }
   }
 
+
   Future<void> removeLog(int index) async {
     final logToRemove = filteredLogs.value[index];
     
     try {
-      bool canDelete = AccessControlService.canPerform(currentUser.role, 'delete', isOwner: logToRemove.authorId == currentUser.id);
+      bool canDelete = (logToRemove.authorId == currentUser.id);
 
       if (!canDelete) {
         await LogHelper.writeLog("SECURITY: Unauthorized delete attempt by ${currentUser.id}", level: 1);
@@ -136,11 +139,12 @@ class LogController {
     }
   }
 
+
   Future<void> loadFromDisk() async {
     final box = Hive.box<LogModel>('offline_logs');
     
     try {
-      // 1. Ambil data terbaru dari Cloud (MongoDB)
+      //Ambil data terbaru dari Cloud (MongoDB)
       final cloudData = await MongoService().getLogs();
       final localData = box.values.toList();
       
@@ -163,16 +167,25 @@ class LogController {
       for (var log in cloudData) {
         await box.put(log.id.toString(), log);
       }
+
+      final visibleLogs = cloudData.where((log) {
+        return log.authorId == currentUser.id || log.isPublic == true;
+      }).toList();
       
-      logsNotifier.value = cloudData;
+      logsNotifier.value = visibleLogs;
     } catch (e) {
-      // 3. Jika gagal/offline, ambil data dari Hive saja
+      //Jika gagal/offline, ambil data dari Hive saja
       await LogHelper.writeLog("Offline Mode: Mengambil data dari local storage.");
-      logsNotifier.value = box.values.toList();
+      final localVisibileLogs = box.values.where((log) {
+        return log.authorId == currentUser.id || log.isPublic == true;
+      }).toList();
+
+      logsNotifier.value = localVisibileLogs;
     } finally {
       filteredLogs.value = logsNotifier.value;
     }
   }
+
 
   void searchLog(String query) {
     if (query.isEmpty) {

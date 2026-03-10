@@ -29,6 +29,9 @@ class LogModel {
   @HiveField(7)
   bool isSynced;
 
+  @HiveField(8, defaultValue: false)
+  final bool isPublic;
+
   LogModel({
     this.id,
     required this.title,
@@ -38,6 +41,7 @@ class LogModel {
     required this.authorId,
     required this.teamId,
     this.isSynced = true,
+    required this.isPublic,
   });
 
   factory LogModel.fromMap(Map<String,dynamic> map) {
@@ -62,6 +66,7 @@ class LogModel {
       authorId: map['authorId'] ?? 'unknown_user',
       teamId: map['teamId'] ?? 'no_team',
       isSynced: true,
+      isPublic: map['isPublic'] ?? false,
     );
   }
 
@@ -74,6 +79,7 @@ class LogModel {
       'category' : category,
       'authorId' : authorId,
       'teamId' : teamId,
+      'isPublic' : isPublic,
     };
   }
 }

@@ -3,8 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:logbook_app_001/features/logbook/log_controller.dart';
 import 'package:logbook_app_001/features/auth/login_view.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
-import 'package:logbook_app_001/services/access_control_service.dart';
-
+import 'package:logbook_app_001/features/logbook/log_editor_page.dart';
 class LogView extends StatefulWidget {
   final String username;
   final String role;
@@ -17,10 +16,6 @@ class LogView extends StatefulWidget {
 
 class _LogViewState extends State<LogView> {
   late final LogController _controller;
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-
-  final List<String> _categories = ['Pribadi', 'Pekerjaan', 'Urgent'];
 
   @override
   void initState() {
@@ -59,181 +54,6 @@ class _LogViewState extends State<LogView> {
       default:
         return Colors.green.shade100;
     }
-  }
-
-  void _showAddLogDialog() {
-    String selectedCategory = 'Pribadi';
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text("Tambah Catatan Baru"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      hintText: "Judul Catatan",
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _contentController,
-                    decoration: const InputDecoration(
-                      hintText: "Isi Deskripsi",
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedCategory,
-                    decoration: const InputDecoration(
-                      labelText: "Kategori",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _categories.map((String category) {
-                      return DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          selectedCategory = value;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _titleController.clear();
-                    _contentController.clear();
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Batal"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_titleController.text.isEmpty ||
-                        _contentController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Title dan description tidak boleh kosong!",
-                          ),
-                          backgroundColor: Colors.red,
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    } else {
-                      _controller.addLog(
-                        _titleController.text,
-                        _contentController.text,
-                        selectedCategory,
-                      );
-                      _titleController.clear();
-                      _contentController.clear();
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text("Simpan"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showEditLogDialog(int index, LogModel log) {
-    _titleController.text = log.title;
-    _contentController.text = log.description;
-    String selectedCategory = log.category;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text("Edit Catatan"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: _titleController),
-                  const SizedBox(height: 10),
-                  TextField(controller: _contentController),
-                  const SizedBox(height: 15),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedCategory,
-                    decoration: const InputDecoration(
-                      labelText: "Kategori",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _categories.map((String category) {
-                      return DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          selectedCategory = value;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _titleController.clear();
-                    _contentController.clear();
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Batal"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_titleController.text.isEmpty ||
-                        _contentController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Title dan description tidak boleh kosong!",
-                          ),
-                          backgroundColor: Colors.red,
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    } else {
-                      _controller.updateLog(
-                        index,
-                        _titleController.text,
-                        _contentController.text,
-                        selectedCategory,
-                      );
-                      _titleController.clear();
-                      _contentController.clear();
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text("Update"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
   }
 
   void _handleLogout() {
@@ -338,10 +158,6 @@ class _LogViewState extends State<LogView> {
                             const SizedBox(height: 16),
                             const Text("Belum ada catatan di Cloud."),
                             const SizedBox(height: 10),
-                            ElevatedButton(
-                              onPressed: _showAddLogDialog,
-                              child: const Text("Buat Catatan Pertama"),
-                            ),
                           ],
                         ),
                       );
@@ -371,11 +187,11 @@ class _LogViewState extends State<LogView> {
                         itemBuilder: (context, index) {
                           final log = currentLogs[index];
 
-                          bool canDelete = AccessControlService.canPerform(_controller.currentUser.role, 'delete', isOwner: log.authorId == _controller.currentUser.id);
+                          bool isOwner = (log.authorId == _controller.currentUser.id);
                           
                           return Dismissible(
                             key: Key(log.id?.toString() ?? log.date.toString()),
-                            direction: canDelete ? DismissDirection.endToStart : DismissDirection.none,
+                            direction: isOwner ? DismissDirection.endToStart : DismissDirection.none,
                             background: Container(
                               color: Colors.red,
                               alignment: Alignment.centerRight,
@@ -449,15 +265,27 @@ class _LogViewState extends State<LogView> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (AccessControlService.canPerform(_controller.currentUser.role, 'update', isOwner:log.authorId == _controller.currentUser.id))
+                                    if (isOwner)
                                       IconButton(
                                         icon: const Icon(
                                           Icons.edit,
                                           color: Colors.blue,
                                       ),
-                                      onPressed: () => _showEditLogDialog(index, log),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => LogEditorPage(
+                                              log: log,
+                                              index: index,
+                                              controller: _controller,
+                                              currentUser: _controller.currentUser,
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
-                                    if (AccessControlService.canPerform(_controller.currentUser.role, 'delete', isOwner:log.authorId == _controller.currentUser.id))
+                                    if (isOwner)
                                         IconButton(
                                           icon: Icon(Icons.delete, color: Colors.red),
                                           onPressed: () => _controller.removeLog(index),
@@ -479,7 +307,17 @@ class _LogViewState extends State<LogView> {
       ),
       //add button
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddLogDialog,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LogEditorPage(
+                controller: _controller,
+                currentUser: _controller.currentUser,
+              ),
+            ),
+          );
+        },
         child: const Icon(Icons.add),
       ),
     );
