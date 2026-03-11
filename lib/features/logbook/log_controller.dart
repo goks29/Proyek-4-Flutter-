@@ -191,9 +191,8 @@ class LogController {
     if (query.isEmpty) {
       filteredLogs.value = logsNotifier.value;
     } else {
-      filteredLogs.value = logsNotifier.value
-          .where((log) => log.title.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      filteredLogs.value = logsNotifier.value.where((log) => log.title.toLowerCase().contains(query.toLowerCase())).toList();
+      filteredLogs.value = logsNotifier.value.where((log) => log.description.toLowerCase().contains(query.toLowerCase())).toList();  
     }
   }
 }

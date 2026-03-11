@@ -28,7 +28,7 @@ class LogEditorPage extends StatefulWidget {
 class _LogEditorPageState extends State<LogEditorPage> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
-  String _selectedCategory = 'Pribadi';
+  String _selectedCategory = 'Software';
   bool _isPublic = false;
 
 
@@ -37,7 +37,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
     super.initState();
     _titleController = TextEditingController(text: widget.log?.title ?? '');
     _descController = TextEditingController(text: widget.log?.description ?? '',);
-    _selectedCategory = widget.log?.category ?? 'Pribadi';
+    _selectedCategory = widget.log?.category ?? 'Software';
     _isPublic = widget.log?.isPublic ?? false;
 
 
@@ -116,7 +116,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
                       labelText: "Kategori",
                       border: OutlineInputBorder(),
                     ),
-                    items: ['Pribadi', 'Pekerjaan', 'Urgent'].map((String category) {
+                    items: ['Mechanical', 'Electronic', 'Software'].map((String category) {
                       return DropdownMenuItem(
                         value: category,
                         child: Text(category),
