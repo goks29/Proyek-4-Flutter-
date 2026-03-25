@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:hive/hive.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
 import 'package:logbook_app_001/services/mongo_service.dart';
 import 'package:logbook_app_001/helpers/log_helper.dart';
@@ -14,6 +15,7 @@ class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
   final ValueNotifier<List<LogModel>> filteredLogs = ValueNotifier([]);
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
+  final ValueNotifier<bool> isOffline = ValueNotifier(false);
 
   LogController(this.username, this.role) {
     currentUser = (id: username, role:role, teamId: 'team_polban_01');
@@ -29,11 +31,13 @@ class LogController {
         onTimeout: () => throw Exception("Koneksi Cloud Timeout. Periksa sinyal/IP Whitelist."),
       );
 
+      isOffline.value = false;
       await loadFromDisk(); 
       await LogHelper.writeLog("CONTROLLER: Data berhasil dimuat.", source: "log_controller.dart");
     } catch (e) {
+      isOffline.value = true;
       await LogHelper.writeLog("CONTROLLER: Error - $e", level: 1);
-      rethrow;
+      await loadFromDisk();
     } finally {
       isLoading.value = false; 
     }
@@ -194,5 +198,37 @@ class LogController {
       filteredLogs.value = logsNotifier.value.where((log) => log.title.toLowerCase().contains(query.toLowerCase())).toList();
       filteredLogs.value = logsNotifier.value.where((log) => log.description.toLowerCase().contains(query.toLowerCase())).toList();  
     }
+  }
+
+  void setUpNetworkListener() {
+    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) async {
+      if (results.contains(ConnectivityResult.mobile) || results.contains(ConnectivityResult.wifi)) {
+        isOffline.value = false;
+        await _syncOfflineLogs();
+      } else {
+        isOffline.value = true;
+      }
+    });
+  }
+
+  Future<void> _syncOfflineLogs() async {
+    final box = Hive.box<LogModel>('offline_logs');
+    final offlineLogs = box.values.where((log) => log.isSynced == false).toList();
+
+    if (offlineLogs.isEmpty) return;
+
+    LogHelper.writeLog("Koneksi terdeteksi. Memulai auto-sync ${offlineLogs.length} catatan...");
+
+    for (var log in offlineLogs) {
+      try {
+        await MongoService().insertLog(log);
+        log.isSynced = true;
+        await box.put(log.id.toString(), log);
+      } catch (e) {
+        LogHelper.writeLog("Gagal auto-sync catatan ${log.title}: $e");
+      }
+    }
+
+    await loadFromDisk();
   }
 }

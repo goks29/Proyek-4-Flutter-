@@ -23,6 +23,7 @@ class _LogViewState extends State<LogView> {
   void initState() {
     super.initState();
     _controller = LogController(widget.username, widget.role);
+    _controller.setUpNetworkListener();
     Future.microtask(
       () => _controller.initDatabase().catchError((e) {
         if (mounted) {
@@ -122,6 +123,34 @@ class _LogViewState extends State<LogView> {
           //search bar
           return Column(
             children: [
+              ValueListenableBuilder<bool>(
+                valueListenable: _controller.isOffline,
+                builder: (context, isOffline, child) {
+                  if (!isOffline) return const SizedBox.shrink();
+
+                  return Container(
+                    width: double.infinity,
+                    color: Colors.orange.shade800,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.cloud_off, color: Colors.white, size: 20),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Mode Offline Aktif. Perubahan disimpan di perangkat dan akan disinkronkan otomatis saat online.",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                } 
+              ),
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextField(
