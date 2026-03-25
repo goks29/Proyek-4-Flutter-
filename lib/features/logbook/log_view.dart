@@ -75,6 +75,7 @@ class _LogViewState extends State<LogView> {
             ),
             TextButton(
               onPressed: () {
+                _controller.isOff = true;
                 Navigator.pop(context);
                 Navigator.pushAndRemoveUntil(
                   context,

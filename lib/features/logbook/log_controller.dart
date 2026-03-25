@@ -16,6 +16,7 @@ class LogController {
   final ValueNotifier<List<LogModel>> filteredLogs = ValueNotifier([]);
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
   final ValueNotifier<bool> isOffline = ValueNotifier(false);
+  bool isOff = false;
 
   LogController(this.username, this.role) {
     currentUser = (id: username, role:role, teamId: 'team_polban_01');
@@ -202,6 +203,7 @@ class LogController {
 
   void setUpNetworkListener() {
     Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) async {
+      if (isOff) return;
       if (results.contains(ConnectivityResult.mobile) || results.contains(ConnectivityResult.wifi)) {
         isOffline.value = false;
         await _syncOfflineLogs();
