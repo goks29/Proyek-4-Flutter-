@@ -10,7 +10,7 @@ Android Studio / VS Code dengan ekstensi Flutter/Dart.
 
 Environment: Disarankan dijalankan pada OS Linux (Dual-boot) atau Windows dengan NDK yang terkonfigurasi untuk OpenCV.
 
-📦 Langkah-Langkah Instalasi
+---Langkah-Langkah Instalasi---
 
 Ikuti langkah berikut untuk menjalankan proyek di perangkat lokal Anda:
 
