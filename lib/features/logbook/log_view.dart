@@ -5,6 +5,9 @@ import 'package:logbook_app_001/features/logbook/log_controller.dart';
 import 'package:logbook_app_001/features/auth/login_view.dart';
 import 'package:logbook_app_001/features/logbook/models/log_model.dart';
 import 'package:logbook_app_001/features/logbook/log_editor_page.dart';
+// Import Baru
+import 'package:logbook_app_001/features/vision/vision_view.dart'; 
+
 
 class LogView extends StatefulWidget {
   final String username;
@@ -104,6 +107,17 @@ class _LogViewState extends State<LogView> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
+          // --- TOMBOL VISION BARU (Module 6) ---
+          IconButton(
+            icon: const Icon(Icons.camera_alt),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const VisionView()),
+              );
+            },
+            tooltip: 'Smart Patrol Vision',
+          ),
         ],
       ),
       body: ValueListenableBuilder<bool>(
