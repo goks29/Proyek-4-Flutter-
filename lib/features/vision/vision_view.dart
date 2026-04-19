@@ -1,23 +1,8 @@
-import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'vision_controller.dart';
-import 'damage_painter.dart';
 
-/// VisionPage implements the layered stack architecture
-/// for Smart Patrol System.
-///
-/// Architecture:
-/// - Layer 1 (Bottom): CameraPreview - Live video feed from hardware
-/// - Layer 2 (Top): CustomPaint - Digital overlay for detection boxes
-///
-/// This follows Separation of Concerns principle:
-/// - VisionController: Manages camera lifecycle and detection logic
-/// - VisionPage: Manages UI layout and user interactions
-/// - DamagePainter: Manages drawing logic (Phase 4)
 class VisionView extends StatefulWidget {
   const VisionView({super.key});
 
@@ -26,179 +11,123 @@ class VisionView extends StatefulWidget {
 }
 
 class _VisionViewState extends State<VisionView> {
-  // Initialize controller locally for this page
   late VisionController _visionController;
 
   @override
   void initState() {
     super.initState();
     _visionController = VisionController();
-
-    // Start mock detection (Phase 5)
     _visionController.startMockDetection();
   }
 
   @override
   void dispose() {
-    // MANDATORY: Disconnect camera when navigating away
-    // This prevents memory leaks and battery drain
     _visionController.dispose();
     super.dispose();
   }
 
+  Widget _buildMenuButton(IconData icon, String label, VoidCallback onPressed) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: Icon(icon, color: Colors.white, size: 30),
+            onPressed: onPressed,
+          ),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Smart-Patrol Vision"),
-        actions: [
-          // Flashlight toggle (Phase 6 UX Enhancement)
-          IconButton(
-            icon: Icon(
-              _visionController.isFlashlightOn
-                  ? Icons.flash_on
-                  : Icons.flash_off,
-            ),
-            onPressed: _visionController.toggleFlashlight,
-            tooltip: 'Toggle Flashlight',
+    return ListenableBuilder(
+      listenable: _visionController,
+      builder: (context, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text("PCD Image Editor"),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  _visionController.isFlashlightOn
+                      ? Icons.flash_on
+                      : Icons.flash_off,
+                ),
+                onPressed: _visionController.toggleFlashlight,
+                tooltip: 'Toggle Flashlight',
+              ),
+              if (_visionController.processedImage != null)
+                IconButton(
+                  icon: const Icon(Icons.undo),
+                  onPressed: _visionController.resetImage,
+                  tooltip: 'Reset Gambar',
+                ),
+            ],
           ),
-          // Overlay visibility toggle (Phase 6 UX Enhancement)
-          IconButton(
-            icon: Icon(
-              _visionController.isOverlayVisible
-                  ? Icons.visibility
-                  : Icons.visibility_off,
-            ),
-            onPressed: _visionController.toggleOverlay,
-            tooltip: 'Toggle Overlay',
-          ),
-        ],
-      ),
-      body: ListenableBuilder(
-        listenable: _visionController,
-        builder: (context, child) {
-          // Show loading if camera is initializing
-          if (!_visionController.isInitialized) {
-            return _buildLoadingState();
-          }
-
-          // Continue to Stack structure
-          return _buildVisionStack();
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final image = await _visionController.takePhoto();
-          if (image != null && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Photo saved: ${image.path}'),
-                duration: const Duration(seconds: 3),
-                action: SnackBarAction(
-                  label: 'View',
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: const Text('Hasil Foto'),
-                          content: Image.file(File(image.path)),
-                          actions: [
-                            TextButton(
-                              child: const Text('Tutup'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                          ],
-                        );
-                      }
-                    );
-                    // You can add code here to open the image
-                    // For now, just showing the path
-                  },
+          body: Column (
+            children: [
+              Expanded(
+                child: Center(
+                  child: _visionController.processedImage != null
+                      ? Image.memory(
+                        _visionController.processedImage!,
+                        fit: BoxFit.contain,
+                      )
+                    : (!_visionController.isInitialized
+                        ? const CircularProgressIndicator()
+                        : CameraPreview(_visionController.controller!)),
                 ),
               ),
-            );
-          }
-        },
-        tooltip: 'Capture Photo',
-        child: const Icon(Icons.camera),
-      ),
-    );
-  }
 
-  /// Build loading state with informative message
-  /// Phase 6 UX Enhancement
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          const Text(
-            "Menghubungkan ke Sensor Visual...",
-            style: TextStyle(fontSize: 16),
-          ),
-          if (_visionController.errorMessage != null) ...[
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _visionController.errorMessage!,
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => openAppSettings(),
-              child: const Text("Open Settings"),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Build the layered stack architecture
-  ///
-  /// This is the core of Vision architecture:
-  /// - Stack with fit: StackFit.expand fills entire screen
-  /// - Layer 1: CameraPreview with AspectRatio to prevent distortion
-  /// - Layer 2: CustomPaint for digital overlay
-  Widget _buildVisionStack() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // LAYER 1: Hardware Preview
-        // Use AspectRatio to prevent image distortion (PCD Connection)
-        // Camera images often have different aspect ratios than screen
-        // This ensures the image maintains correct proportions
-        Center(
-          child: AspectRatio(
-            aspectRatio: 1 / _visionController.controller!.value.aspectRatio,
-            child: Stack(
-              children: [
-                CameraPreview(_visionController.controller!),
-                // LAYER 2: Digital Overlay (Canvas)
-                // This layer is transparent and sits exactly above camera
-                // DamagePainter will draw detection boxes here (Phase 4)
-                if (_visionController.isOverlayVisible)
-                  Positioned.fill(
-                    child: CustomPaint(
-                    painter: DamagePainter(
-                      _visionController.currentDetections,
-                    ), // Phase 4: Will be updated with detections
+              if(_visionController.processedImage != null) 
+                Container(
+                  height: 100,
+                  color: Colors.grey[900],
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    children: [
+                      _buildMenuButton(Icons.invert_colors, "Inverse", _visionController.applyInverse),
+                      _buildMenuButton(Icons.gradient, "Grayscale", _visionController.applyGrayscale),
+                      _buildMenuButton(Icons.equalizer, "Equalize", _visionController.applyEqualizeHistogram),
+                      _buildMenuButton(Icons.details, "Sharpen", _visionController.applySharpen),
+                      _buildMenuButton(Icons.blur_on, "Blur", _visionController.applyGaussianBlur),
+                      _buildMenuButton(Icons.line_style, "Edge", _visionController.applyEdgeDetection),
+                    ],
                   ),
+                ),
+            ],
+          ),
+          floatingActionButton: _visionController.processedImage == null
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Tombol BARU: Upload dari Galeri
+                FloatingActionButton(
+                  heroTag: "btn_gallery",
+                  backgroundColor: Colors.blue, // Kasih warna beda biar enak
+                  onPressed: () => _visionController.pickImageFromGallery(),
+                  tooltip: 'Upload Gambar',
+                  child: const Icon(Icons.photo_library),
+                ),
+                const SizedBox(height: 16),
+                
+                // Tombol Kamera yang udah ada (tetep simpen di sini)
+                FloatingActionButton(
+                  heroTag: "btn_kamera",
+                  onPressed: () => _visionController.setImageFromCamera(),
+                  tooltip: 'Capture Photo',
+                  child: const Icon(Icons.camera_alt),
                 ),
               ],
             )
-          ),
-        ),
-      ],
+          : null,
+        );
+      }
     );
   }
 }

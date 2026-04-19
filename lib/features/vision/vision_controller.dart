@@ -1,8 +1,15 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'dart:ui' as ui;
+
+import 'dart:typed_data';
+import 'package:opencv_dart/opencv.dart';
+import 'package:opencv_dart/opencv_dart.dart' as cv;
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// VisionController manages the camera lifecycle and detection logic
 /// for the Smart Patrol System.
@@ -26,6 +33,12 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
   // UX Enhancement: Flashlight and Overlay toggles (Phase 6)
   bool isFlashlightOn = false;
   bool isOverlayVisible = true;
+
+  //Variable untuk nampung gambar di opencv
+  Uint8List? processedImage;
+  Uint8List? originalImage;
+  cv.Mat? currentMatrix;
+   final ImagePicker _picker = ImagePicker();
 
   VisionController() {
     // Register observer to monitor app lifecycle status
@@ -167,7 +180,7 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
     // Create detection result
     currentDetections = [
       DetectionResult(
-        box: Rect.fromLTWH(x, y, width, height),
+        box: ui.Rect.fromLTWH(x, y, width, height),
         label: _getRandomDamageType(),
         score: 0.85 + random.nextDouble() * 0.14, // 85%-99% confidence
       ),
@@ -208,6 +221,121 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
 
     super.dispose();
   }
+
+  //fungsi fungsi opencv
+  Future<void> setImageFromCamera() async {
+    final image = await takePhoto();
+    if (image == null) return;
+
+    final bytes = await image.readAsBytes();
+    originalImage = bytes;
+    processedImage = bytes;
+
+    currentMatrix = imdecode(bytes, IMREAD_COLOR);
+    notifyListeners();
+  }
+
+  void _updateProcessedImage(cv.Mat matrix, {bool isGray = false}) {
+    cv.Mat displayMatrix = matrix;
+    if (isGray) {
+      displayMatrix = cv.cvtColor(matrix, cv.COLOR_GRAY2BGR);
+    }
+    processedImage = cv.imencode('.jpg', displayMatrix).$2;
+    notifyListeners();
+  }
+
+  void applyInverse() {
+    if (currentMatrix == null) return;
+    try {
+      final resultMatrix = cv.bitwiseNOT(currentMatrix!);
+      _updateProcessedImage(resultMatrix);
+    } catch (e) {
+      errorMessage = "Gagal inverse: $e";
+    } 
+  }
+
+  void applyGrayscale() {
+    if (currentMatrix == null) return;
+    try {
+      final resultMatrix = cv.cvtColor(currentMatrix!, cv.COLOR_BGR2GRAY);
+      _updateProcessedImage(resultMatrix, isGray: true);
+    } catch (e) {
+      errorMessage = "Gagal Grayscale: $e";
+    }
+  }
+
+  void applyEqualizeHistogram() {
+    if (currentMatrix == null) return;
+    try {
+      final grayMatrix = cv.cvtColor(currentMatrix!, cv.COLOR_BGR2GRAY);
+      final resultMatrix = cv.equalizeHist(grayMatrix);
+      _updateProcessedImage(resultMatrix, isGray: true);
+    } catch (e) {
+      errorMessage = "Gagal Equalize Histogram: $e";
+    }
+  }
+
+  void applySharpen() {
+    if (currentMatrix == null) return;
+    try {
+      final kernel = cv.Mat.fromList(3, 3, cv.MatType.CV_32FC1, [0.0, -1.0, 0.0, -1.0, 5.0, -1.0, 0.0, -1.0, 0.0]);
+      final resultMatrix = cv.filter2D(currentMatrix!, -1, kernel);
+      _updateProcessedImage(resultMatrix);
+    } catch (e) {
+      errorMessage = "Gagal Sharpening: $e";
+    }
+  }
+
+  void applyGaussianBlur() {
+    if (currentMatrix == null) return;
+    try {
+      final resultMatrix = cv.gaussianBlur(currentMatrix!, (5,5), 0);
+      _updateProcessedImage(resultMatrix);
+    } catch (e) {
+      errorMessage = "Gagal Gausian Blur : $e";
+    }
+  }
+
+  void applyEdgeDetection() {
+    if (currentMatrix == null) return;
+    try {
+      final grayMatrix = cv.cvtColor(currentMatrix!, cv.COLOR_BGR2GRAY);
+      final resultMatrix = cv.canny(grayMatrix, 100.0, 200.0);
+      _updateProcessedImage(resultMatrix, isGray: true);
+    } catch (e) {
+      errorMessage = "Gagal Edge Detection: $e";
+    }
+  }
+
+  void resetImage() {
+    if (originalImage != null) {
+      processedImage = originalImage;
+      currentMatrix = cv.imdecode(originalImage!, cv.IMREAD_COLOR);
+      notifyListeners();
+    }
+  }
+
+  Future<void> pickImageFromGallery() async {
+    try {
+      // 1. Pilih gambar dari galeri
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      
+      if (image == null) return; 
+
+      final bytes = await image.readAsBytes();
+      
+      originalImage = bytes;
+      processedImage = bytes;
+      currentMatrix = cv.imdecode(bytes, cv.IMREAD_COLOR);
+      
+      errorMessage = null;
+    } catch (e) {
+      errorMessage = "Gagal ambil gambar dari galeri: $e";
+    }
+    
+    notifyListeners();
+  }
+
 }
 
 /// Data Transfer Object (DTO) for detection results
@@ -219,7 +347,7 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
 /// If you replace YOLO with another model, only change data population
 /// in VisionController without touching UI or Painter code.
 class DetectionResult {
-  final Rect box; // Box coordinates (normalized 0.0-1.0)
+  final ui.Rect box; // Box coordinates (normalized 0.0-1.0)
   final String label; // Damage type (D40, D20, etc)
   final double score; // AI confidence percentage (0.0-1.0)
 
