@@ -16,31 +16,31 @@ Ikuti langkah berikut untuk menjalankan proyek di perangkat lokal Anda:
 
 1. Ekstraksi & Persiapan Folder
 
-Ekstrak file .zip proyek ini ke direktori kerja Anda. Masuk ke root folder proyek:
+    Ekstrak file .zip proyek ini ke direktori kerja Anda. Masuk ke root folder proyek:
 
-cd logbook_appai_001
+    cd logbook_appai_001
 
 
 2. Konfigurasi Environment (.env)
 
-Aplikasi ini menggunakan flutter_dotenv. Buat file bernama .env di root direktori (sejajar dengan pubspec.yaml) jika belum ada, dan isi dengan variabel yang diperlukan (Contoh: API keys atau konfigurasi database).
+    Aplikasi ini menggunakan flutter_dotenv. Buat file bernama .env di root direktori (sejajar dengan pubspec.yaml) jika belum ada, dan isi dengan variabel yang diperlukan (Contoh: API keys atau konfigurasi database).
 
 3. Instalasi Dependencies
 
-Jalankan perintah berikut untuk mengunduh semua library yang diperlukan (Camera, OpenCV, Hive, dll):
+    Jalankan perintah berikut untuk mengunduh semua library yang diperlukan (Camera, OpenCV, Hive, dll):
 
-flutter pub get
+    flutter pub get
 
 
 4. Setup OpenCV (Penting)
 
-Aplikasi ini menggunakan opencv_dart. Library ini secara otomatis akan mengunduh binary OpenCV yang sesuai saat pertama kali di-build. Pastikan koneksi internet stabil.
+    Aplikasi ini menggunakan opencv_dart. Library ini secara otomatis akan mengunduh binary OpenCV yang sesuai saat pertama kali di-build. Pastikan koneksi internet stabil.
 
 5. Menjalankan Aplikasi
 
-Sambungkan HP Android (dengan mode Debugging aktif) atau gunakan Emulator, lalu jalankan:
+    Sambungkan HP Android (dengan mode Debugging aktif) atau gunakan Emulator, lalu jalankan:
 
-flutter run
+    flutter run
 
 
 
